@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#85B843">
+    <title>پروتوتایپ محله</title>
+    
+    <!-- فراخوانی کتابخانه نقشه Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary-color: #85B843;          
+            --primary-light: #A3D26A;          
+            --glass-green: rgba(133, 184, 67, 0.6); 
+            --accent-color: #dcbc98;           
+            --secondary-color: #b9bba8;        
+            --dark-text: #2a3723;              
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-muted: #6b7c8d;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+            --blue-color: #3b82f6; 
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Vazirmatn', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #d1d5db;
+            color: var(--dark-text);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .mobile-container {
+            width: 100%;
+            max-width: 450px;
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column; 
+        }
+
+        /* هدر شیشه‌ای و ابری */
+        .app-header {
+            padding: 15px 10px; 
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: 36px 1fr 36px;
+            align-items: center;
+            flex-shrink: 0; 
+        }
+
+        .header-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.6), transparent 50%),
+                radial-gradient(circle at 80% 70%, var(--glass-green), transparent 50%),
+                linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+            backdrop-filter: blur(15px) saturate(150%);
+            -webkit-backdrop-filter: blur(15px) saturate(150%);
+            border-bottom-left-radius: 28px;
+            border-bottom-right-radius: 28px;
+            box-shadow: 0 6px 20px rgba(133, 184, 67, 0.3);
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .header-bg::before, .header-bg::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+        }
+        .header-bg::before { top: -30px; right: -30px; width: 150px; height: 150px; }
+        .header-bg::after { bottom: -50px; left: -20px; width: 100px; height: 100px; background: rgba(255, 255, 255, 0.08); }
+
+        .back-btn {
+            grid-column: 3 / span 1; 
+            justify-self: center; 
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: var(--dark-text);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            z-index: 1;
+        }
+        .back-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
+
+        .header-center-container {
+            grid-column: 2 / span 1; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; 
+            gap: 6px; 
+            z-index: 1;
+            width: 100%;
+            max-width: 100%; 
+        }
+
+        .dropdown-btn {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(5px);
+            color: var(--dark-text);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .dropdown-btn:active { background: rgba(255, 255, 255, 0.6); }
+
+        .address-home {
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dark-text);
+            width: 100%;
+            white-space: normal; 
+            line-height: 1.4; 
+            opacity: 0.9;
+            text-align: center;
+            padding: 0 5px;
+        }
+
+        .address-display {
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--dark-text);
+            width: 100%;
+            white-space: normal;
+            line-height: 1.4;
+            text-align: center;
+            padding: 0 5px;
+        }
+
+        /* محتوا */
+        .content-area {
+            padding: 0 15px;
+            position: relative;
+            z-index: 2;
+            margin-top: -15px; 
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content { display: none; animation: fadeIn 0.3s ease; width: 100%; }
+        .active-page { display: block; }
+
+        .content:not(#page-home) {
+            padding-top: 30px; 
+        }
+
+        #page-home.active-page {
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            flex: 1; padding-bottom: 60px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .menu-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            width: 100%; 
+            padding: 0 5px;
+        }
+
+        .menu-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--dark-text);
+            padding: 20px 10px;
+            border-radius: 20px;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            line-height: 1.5;
+        }
+        .menu-btn:hover { 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1); 
+            transform: translateY(-2px); 
+            border-color: var(--primary-color); 
+            background: #fff;
+        }
+        .menu-btn:active { transform: scale(0.98); }
+
+        .page-title { 
+            font-weight: 800; font-size: 17px; color: var(--dark-text); 
+            margin-bottom: 15px; margin-top: 0; padding: 0 5px; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .page-title span:first-child { display: flex; align-items: center; gap: 8px; }
+        .page-title span:first-child::before {
+            content: ''; width: 5px; height: 22px; background: var(--primary-color);
+            border-radius: 3px; display: block; flex-shrink: 0;
+        }
+        .badge { background: var(--primary-light); color: var(--dark-text); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        
+        .info-card { 
+            background: var(--card-bg); padding: 16px; border-radius: 16px; margin-bottom: 12px; 
+            border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
+            color: var(--dark-text); font-size: 15px; font-weight: 600; 
+            display: flex; align-items: center; justify-content: space-between; 
+            transition: all 0.2s;
+        }
+        .info-card.clickable { cursor: pointer; }
+        .info-card.clickable:hover { border-color: var(--primary-color); transform: translateY(-1px); }
+        .info-card.clickable:active { transform: scale(0.98); background: #fafafa; }
+
+        .member-role {
+            font-size: 13px; color: var(--primary-color); font-weight: 700;
+            background: rgba(133, 184, 67, 0.1); padding: 4px 12px; border-radius: 20px;
+        }
+
+        .search-input-wrapper {
+            background: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; gap: 10px;
+            margin-bottom: 15px;
+        }
+        .search-input-wrapper svg { color: var(--text-muted); flex-shrink: 0; }
+        .search-input-wrapper input {
+            border: none; background: transparent; outline: none;
+            font-family: 'Vazirmatn', sans-serif; font-size: 14px;
+            color: var(--dark-text); width: 100%;
+        }
+        .search-input-wrapper input::placeholder { color: var(--text-muted); }
+        
+        .detail-content {
+            background: var(--card-bg); padding: 20px; border-radius: 16px; 
+            border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            line-height: 1.7; font-size: 15px; color: var(--dark-text);
+        }
+        .detail-content h3 { margin-top: 0; margin-bottom: 15px; font-size: 18px; color: var(--primary-color); }
+        .detail-date { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; }
+
+        #miniMap {
+            height: 400px; width: 100%; border-radius: 16px; 
+            border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+        }
+
+        /* استایل باتم شیت اول */
+        .sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 100; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+        .sheet-overlay.active { opacity: 1; visibility: visible; }
+        .bottom-sheet { position: fixed; bottom: 0; left: 50%; transform: translate(-50%, 100%); width: 100%; max-width: 450px; background: var(--card-bg); border-radius: 24px 24px 0 0; z-index: 101; transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); box-shadow: 0 -5px 30px rgba(0,0,0,0.1); max-height: 80vh; overflow-y: auto; }
+        .bottom-sheet.active { transform: translate(-50%, 0); }
+        .sheet-handle { width: 40px; height: 4px; background: var(--border-color); border-radius: 2px; margin: 12px auto 0; }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 15px; }
+        .sheet-title-right { font-weight: 800; font-size: 17px; color: var(--dark-text); }
+        .add-new-address { color: var(--blue-color); font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .search-box { margin: 0 20px 15px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .search-box:active { border-color: var(--primary-color); background: #fff; }
+        .child-item { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+        .child-item:active { background: var(--bg-color); }
+        .child-item-right { display: flex; align-items: center; gap: 12px; font-size: 14.5px; font-weight: 600; color: var(--dark-text); }
+        .pin-icon { color: var(--primary-color); flex-shrink: 0; }
+        .delete-icon { color: var(--danger-color); padding: 5px; flex-shrink: 0; }
+
+        /* استایل باتم شیت دوم (نقشه تمام صفحه) */
+        .map-fullscreen { position: fixed; bottom: 0; left: 50%; transform: translate(-50%, 100%); width: 100%; max-width: 450px; height: 100vh; background: var(--bg-color); z-index: 102; transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1); display: flex; flex-direction: column; }
+        .map-fullscreen.active { transform: translate(-50%, 0); }
+        .map-header-container { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 2; position: relative; }
+        .map-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .map-header svg { color: var(--dark-text); cursor: pointer; }
+        .map-header-title { font-weight: 800; font-size: 17px; color: var(--dark-text); }
+        .map-search-input { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+        .map-search-input svg { color: var(--text-muted); flex-shrink: 0; }
+        .map-search-input input { border: none; background: transparent; outline: none; font-family: 'Vazirmatn', sans-serif; font-size: 14px; color: var(--dark-text); width: 100%; }
+        .map-search-input input::placeholder { color: var(--text-muted); }
+
+        .map-filters-container { display: flex; gap: 10px; margin-top: 12px; }
+        .map-filters-container select { flex: 1; padding: 10px 15px 10px 35px; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--bg-color); font-family: 'Vazirmatn', sans-serif; font-size: 14px; color: var(--dark-text); outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7c8d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: left 12px center; background-size: 16px; cursor: pointer; transition: all 0.2s; }
+        .map-filters-container select:focus { border-color: var(--primary-color); background-color: #fff; box-shadow: 0 0 0 3px rgba(133, 184, 67, 0.15); }
+
+        #map { flex: 1; width: 100%; position: relative; z-index: 0; }
+        .map-footer { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 2; }
+        .confirm-btn { width: 100%; background: var(--primary-color); color: white; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .confirm-btn:active { transform: scale(0.98); background: #76a33a; }
+
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    <div class="app-header">
+        <div class="header-bg"></div>
+        <button class="back-btn" id="backBtn" onclick="goBack()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="header-center-container">
+            <button class="dropdown-btn" id="neighborhoodBtn" onclick="openBottomSheet()">
+                محله‌ی من ▾
+            </button>
+            <div class="address-home" id="addressHome">انتخاب آدرس</div>
+            <div class="address-display" id="addressDisplay">انتخاب آدرس</div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="content active-page" id="page-home">
+            <div class="menu-grid">
+                <button class="menu-btn" onclick="showPage('page-members')">اعضای شورای اجتماعی</button>
+                <button class="menu-btn" onclick="showPage('page-rules')">مصوبات شورای اجتماعی</button>
+                <button class="menu-btn" onclick="showPage('page-map')">نقشه محله من</button>
+                <!-- دکمه نظرسنجی باقیمانده اما اکشن آن غیرفعال شده است -->
+                <button class="menu-btn" onclick="alert('این بخش به زودی فعال می‌شود.')">نظرسنجی</button>
+            </div>
+        </div>
+        
+        <div class="content" id="page-members">
+            <div class="page-title"><span>لیست اعضای شورای اجتماعی محله</span><span class="badge">3 نفر</span></div>
+            <div class="info-card">
+                <span>علی رضایی</span>
+                <span class="member-role">رئیس</span>
+            </div>
+            <div class="info-card">
+                <span>رضا کریمی</span>
+                <span class="member-role">نائب رئیس</span>
+            </div>
+            <div class="info-card">
+                <span>مریم احمدی</span>
+                <span class="member-role">عضو</span>
+            </div>
+        </div>
+
+        <div class="content" id="page-rules">
+            <div class="page-title"><span>مصوبات شورای اجتماعی محله</span><span class="badge">2 مورد</span></div>
+            
+            <div class="search-input-wrapper">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="جستجوی مصوبه...">
+            </div>
+
+            <div class="info-card clickable" onclick="showResolutionDetail('تخصیص بودجه پارک', 'تخصیص بودجه برای ساخت پارک کوچک', '۱۴۰۲/۰۸/۱۵')">
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                    <span style="font-weight: 700;">تخصیص بودجه برای ساخت پارک کوچک</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">تاریخ: ۱۴۰۲/۰۸/۱۵</span>
+                </div>
+            </div>
+            <div class="info-card clickable" onclick="showResolutionDetail('زمان جمع‌آوری زباله', 'جمع‌آوری زباله‌ها ساعت ۶ صبح', '۱۴۰۲/۰۹/۰۱')">
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                    <span style="font-weight: 700;">جمع‌آوری زباله‌ها ساعت ۶ صبح</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">تاریخ: ۱۴۰۲/۰۹/۰۱</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" id="page-resolution-detail">
+            <div class="detail-content">
+                <h3 id="resolutionDetailTitle"></h3>
+                <div class="detail-date" id="resolutionDetailDate"></div>
+                <p id="resolutionDetailText"></p>
+                <br>
+                <p style="color: var(--text-muted); font-size: 13px;">این مصوبه در جلسه شورای اجتماعی محله به تصویب رسید و از تاریخ تصویب لازم‌الاجراست.</p>
+            </div>
+        </div>
+
+        <div class="content" id="page-map">
+            <div class="page-title"><span>نقشه محله من</span></div>
+            <div id="miniMap"></div>
+        </div>
+    </div>
+</div>
+
+<!-- شیت اول: انتخاب محله -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeBottomSheet()"></div>
+<div class="bottom-sheet" id="bottomSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+        <span class="sheet-title-right">انتخاب محله</span>
+        <span class="add-new-address" onclick="openFullScreenMap()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            آدرس جدید
+        </span>
+    </div>
+    
+    <div class="search-box" onclick="openFullScreenMap()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span>جستجوی محله</span>
+    </div>
+
+    <div class="child-item" onclick="selectNeighborhood('منطقه 1، محله سجاد، خیابان 36، کوچه 4')">
+        <div class="child-item-right">
+            <svg class="pin-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <span>منطقه 1، محله سجاد، خیابان 36، کوچه 4</span>
+        </div>
+        <div class="delete-icon" onclick="deleteAddress(event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </div>
+    </div>
+
+    <div class="child-item" onclick="selectNeighborhood('منطقه 11، محله آزادشهر، خیابان 12، کوچه 8')">
+        <div class="child-item-right">
+            <svg class="pin-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <span>منطقه 11، محله آزادشهر، خیابان 12، کوچه 8</span>
+        </div>
+        <div class="delete-icon" onclick="deleteAddress(event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </div>
+    </div>
+
+    <div id="customAddressesContainer"></div>
+</div>
+
+<!-- شیت دوم: نقشه تمام صفحه -->
+<div class="map-fullscreen" id="fullScreenMap">
+    <div class="map-header-container">
+        <div class="map-header-top">
+            <span class="map-header-title">انتخاب محله روی نقشه</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" onclick="closeFullScreenMap()" style="cursor: pointer;">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </div>
+        <div class="map-search-input">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="mapSearchInput" placeholder="منطقه، محله، خیابان و ...">
+        </div>
+        
+        <div class="map-filters-container">
+            <select id="mapRegionSelect" onchange="filterNeighborhoods()">
+                <option value="">انتخاب منطقه</option>
+                <option value="1">منطقه 1</option>
+                <option value="2">منطقه 2</option>
+                <option value="3">منطقه 3</option>
+                <option value="4">منطقه 4</option>
+                <option value="5">منطقه 5</option>
+                <option value="6">منطقه 6</option>
+                <option value="7">منطقه 7</option>
+                <option value="8">منطقه 8</option>
+                <option value="9">منطقه 9</option>
+                <option value="10">منطقه 10</option>
+                <option value="11">منطقه 11</option>
+                <option value="12">منطقه 12</option>
+                <option value="ثامن">منطقه ثامن</option>
+            </select>
+            <select id="mapNeighborhoodSelect" onchange="selectMapNeighborhood()">
+                <option value="">انتخاب محله</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <div class="map-footer">
+        <button class="confirm-btn" onclick="confirmMapLocation()">تایید</button>
+    </div>
+</div>
+
+<script>
+    var map = null; 
+    var currentMarker = null;
+    var miniMap = null;
+    var miniMapPolygon = null;
+    var selectedNeighborhoodData = null; 
+
+    var neighborhoods = [
+        { name: "سجاد", region: "1", regionName: "منطقه 1", coords: [[36.318, 59.535], [36.328, 59.565], [36.310, 59.580], [36.295, 59.560]] },
+        { name: "احمدآباد", region: "1", regionName: "منطقه 1", coords: [[36.300, 59.600], [36.310, 59.620], [36.290, 59.630], [36.280, 59.610]] },
+        { name: "آزادشهر", region: "11", regionName: "منطقه 11", coords: [[36.280, 59.500], [36.290, 59.520], [36.275, 59.540], [36.260, 59.510]] },
+        { name: "ثامن", region: "ثامن", regionName: "منطقه ثامن", coords: [[36.350, 59.550], [36.360, 59.570], [36.340, 59.580], [36.330, 59.560]] }
+    ];
+
+    var regionsData = {
+        "1": ["سجاد", "احمدآباد", "وکیل‌آباد"],
+        "2": ["محله 2-1", "محله 2-2"],
+        "3": ["محله 3-1", "محله 3-2"],
+        "4": ["محله 4-1"],
+        "5": ["محله 5-1"],
+        "6": ["محله 6-1"],
+        "7": ["محله 7-1"],
+        "8": ["محله 8-1"],
+        "9": ["محله 9-1"],
+        "10": ["محله 10-1"],
+        "11": ["آزادشهر", "فرامرز"],
+        "12": ["محله 12-1"],
+        "ثامن": ["ثامن", "ارم"]
+    };
+
+    function isPointInPolygon(point, polygon) {
+        var x = point.lat, y = point.lng;
+        var inside = false;
+        for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            var xi = polygon[i].lat, yi = polygon[i].lng;
+            var xj = polygon[j].lat, yj = polygon[j].lng;
+            var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function openBottomSheet() {
+        document.getElementById('sheetOverlay').classList.add('active');
+        document.getElementById('bottomSheet').classList.add('active');
+    }
+    function closeBottomSheet() {
+        document.getElementById('sheetOverlay').classList.remove('active');
+        document.getElementById('bottomSheet').classList.remove('active');
+    }
+    
+    function selectNeighborhood(name) {
+        document.getElementById('addressHome').innerText = name;
+        document.getElementById('addressDisplay').innerText = name;
+        
+        selectedNeighborhoodData = null;
+        neighborhoods.forEach(n => {
+            if (name.includes(n.name) && name.includes(n.regionName)) {
+                selectedNeighborhoodData = n;
+            }
+        });
+        
+        if (miniMap) {
+            updateMiniMap();
+        }
+        
+        closeBottomSheet();
+    }
+    
+    function deleteAddress(event) {
+        event.stopPropagation(); 
+        event.currentTarget.closest('.child-item').style.display = 'none';
+    }
+
+    function openFullScreenMap() {
+        closeBottomSheet(); 
+        document.getElementById('fullScreenMap').classList.add('active');
+        
+        if (!map) {
+            map = L.map('map').setView([36.2972, 59.6062], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            neighborhoods.forEach(n => {
+                var poly = L.polygon(n.coords, {
+                    color: '#85B843',
+                    weight: 2,
+                    fillColor: '#85B843',
+                    fillOpacity: 0.2
+                }).addTo(map);
+                
+                poly.bindTooltip(n.regionName + "، محله " + n.name, {permanent: false, direction: 'center'});
+                n.polygon = poly;
+            });
+
+            map.on('click', function(e) {
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+                
+                var greenIcon = L.divIcon({
+                    className: '',
+                    html: '<svg viewBox="0 0 24 24" width="32" height="32" fill="#85B843" stroke="white" stroke-width="2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5" fill="white" stroke="none"></circle></svg>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                });
+                currentMarker = L.marker(e.latlng, {icon: greenIcon}).addTo(map);
+
+                var randomStreet = Math.floor(Math.random() * 50) + 1;
+                var randomAlley = Math.floor(Math.random() * 20) + 1;
+                var clickedAddress = "";
+                var foundInNeighborhood = false;
+
+                neighborhoods.forEach(n => {
+                    if (isPointInPolygon(e.latlng, n.coords)) {
+                        clickedAddress = n.regionName + "، محله " + n.name + "، خیابان " + randomStreet + "، کوچه " + randomAlley;
+                        foundInNeighborhood = true;
+                    }
+                });
+
+                if (!foundInNeighborhood) {
+                    var randomRegion = Math.floor(Math.random() * 12) + 1;
+                    clickedAddress = "منطقه " + randomRegion + "، محله نامشخص، خیابان " + randomStreet + "، کوچه " + randomAlley;
+                }
+
+                document.getElementById('mapSearchInput').value = clickedAddress;
+            });
+        }
+        
+        setTimeout(function() {
+            if (map) map.invalidateSize();
+        }, 400);
+    }
+
+    function filterNeighborhoods() {
+        const regionSelect = document.getElementById('mapRegionSelect');
+        const neighborhoodSelect = document.getElementById('mapNeighborhoodSelect');
+        const selectedRegion = regionSelect.value;
+
+        neighborhoodSelect.innerHTML = '<option value="">انتخاب محله</option>';
+
+        if (selectedRegion && regionsData[selectedRegion]) {
+            regionsData[selectedRegion].forEach(n => {
+                const option = document.createElement('option');
+                option.value = n;
+                option.innerText = n;
+                neighborhoodSelect.appendChild(option);
+            });
+        }
+    }
+
+    function selectMapNeighborhood() {
+        const regionSelect = document.getElementById('mapRegionSelect');
+        const neighborhoodSelect = document.getElementById('mapNeighborhoodSelect');
+        const region = regionSelect.value;
+        const neighborhood = neighborhoodSelect.value;
+
+        if(region && neighborhood) {
+            const regionName = region === 'ثامن' ? 'منطقه ثامن' : 'منطقه ' + region;
+            const fullName = regionName + "، محله " + neighborhood;
+            document.getElementById('mapSearchInput').value = fullName;
+
+            const found = neighborhoods.find(n => n.name === neighborhood && n.region === region);
+            if (found && map) {
+                map.fitBounds(found.polygon.getBounds(), { padding: [50, 50] });
+            }
+        }
+    }
+
+    function closeFullScreenMap() {
+        document.getElementById('fullScreenMap').classList.remove('active');
+    }
+
+    function confirmMapLocation() {
+        var addr = document.getElementById('mapSearchInput').value;
+        if(addr && addr.trim() !== "") {
+            var container = document.getElementById('customAddressesContainer');
+                        
+            var newItem = document.createElement('div');
+            newItem.className = 'child-item';
+            newItem.onclick = function() { selectNeighborhood(addr); };
+            newItem.innerHTML = `
+                <div class="child-item-right">
+                    <svg class="pin-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span>${addr}</span>
+                </div>
+                <div class="delete-icon" onclick="deleteAddress(event)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </div>
+            `;
+            container.appendChild(newItem);
+
+            selectNeighborhood(addr);
+        }
+        closeFullScreenMap();
+    }
+
+    function initMiniMap() {
+        if (!miniMap) {
+            miniMap = L.map('miniMap').setView([36.2972, 59.6062], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(miniMap);
+        }
+        
+        setTimeout(() => {
+            if (miniMap) {
+                miniMap.invalidateSize(); 
+                updateMiniMap(); 
+            }
+        }, 500);
+    }
+
+    function updateMiniMap() {
+        if (miniMapPolygon) {
+            miniMap.removeLayer(miniMapPolygon);
+            miniMapPolygon = null;
+        }
+
+        if (selectedNeighborhoodData) {
+            miniMapPolygon = L.polygon(selectedNeighborhoodData.coords, {
+                color: '#85B843',
+                weight: 3,
+                fillColor: '#85B843',
+                fillOpacity: 0.4
+            }).addTo(miniMap);
+            
+            miniMap.fitBounds(miniMapPolygon.getBounds(), { padding: [40, 40] });
+            
+            miniMapPolygon.bindTooltip(selectedNeighborhoodData.regionName + "، محله " + selectedNeighborhoodData.name, {permanent: false, direction: 'center'}).openTooltip();
+        } else {
+            miniMap.setView([36.2972, 59.6062], 13);
+        }
+    }
+
+    let pageHistory = ['page-home']; 
+
+    function showPage(pageId) {
+        var pages = document.querySelectorAll('.content');
+        pages.forEach(function(page) { page.classList.remove('active-page'); });
+        document.getElementById(pageId).classList.add('active-page');
+        
+        var backBtn = document.getElementById('backBtn');
+        var neighborhoodBtn = document.getElementById('neighborhoodBtn');
+        var addressHome = document.getElementById('addressHome');
+        var addressDisplay = document.getElementById('addressDisplay');
+        
+        neighborhoodBtn.style.display = 'none';
+        addressHome.style.display = 'none';
+        addressDisplay.style.display = 'none';
+        backBtn.style.display = 'none';
+
+        if (pageId === 'page-home') {
+            neighborhoodBtn.style.display = 'flex';
+            addressHome.style.display = 'flex';
+        } else {
+            backBtn.style.display = 'flex';
+            
+            if (pageId !== 'page-resolution-detail') {
+                addressDisplay.style.display = 'flex';
+            }
+            
+            if (pageId === 'page-map') {
+                initMiniMap();
+            }
+        }
+        
+        if (pageHistory[pageHistory.length - 1] !== pageId) {
+            pageHistory.push(pageId);
+        }
+        
+        document.querySelector('.mobile-container').scrollTo(0, 0);
+    }
+
+    function showResolutionDetail(title, text, date) {
+        document.getElementById('resolutionDetailTitle').innerText = title;
+        document.getElementById('resolutionDetailText').innerText = text;
+        document.getElementById('resolutionDetailDate').innerText = "تاریخ مصوبه: " + date;
+        showPage('page-resolution-detail');
+    }
+
+    function goBack() {
+        pageHistory.pop(); 
+        const previousPage = pageHistory[pageHistory.length - 1] || 'page-home';
+        showPage(previousPage);
+    }
+</script>
+
+</body>
+</html>
